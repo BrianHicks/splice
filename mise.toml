@@ -1,2 +1,15 @@
 [tools]
 rust = "1.96.0"
+
+[tasks.ci]
+depends = ["test", "clippy"]
+
+[tasks.test]
+run = "cargo test"
+
+[tasks."test:update"]
+depends = ["TRYCMD=overwrite test"]
+
+[tasks.clippy]
+sources = ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
+run = "cargo clippy"

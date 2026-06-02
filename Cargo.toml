@@ -6,7 +6,10 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.6.1", features = ["cargo", "derive", "env"] }
 color-eyre = "0.6.5"
+eyre = "0.6.12"
 rhai = "1.25.1"
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "1.1.2"
 tera = "1.20.1"
 
 [dev-dependencies]
