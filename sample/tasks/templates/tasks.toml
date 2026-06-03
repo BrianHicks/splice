@@ -1,7 +1,0 @@
-[tools]
-{%- for tool, config in arguments.tools %}
-{{ tool }} = "{{ config.version }}"
-{%- endfor %}
-
-# SPLICE: extra tasks
-# END SPLICE

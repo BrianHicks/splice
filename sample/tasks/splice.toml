@@ -1,7 +1,0 @@
-type = "module"
-
-[arguments.foo]
-type = "string"
-
-[arguments.bar]
-type = "string"
