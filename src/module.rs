@@ -39,6 +39,15 @@ impl Module {
     ) -> Result<BTreeMap<String, Value>> {
         let mut validated = BTreeMap::new();
 
+        // make sure every arg schema is internally consistent (e.g. defaults
+        // match their types) before we start validating any caller input, so
+        // we don't mix mistakes from modules vs applications.
+        for (name, validator) in &config.args {
+            validator
+                .check()
+                .wrap_err_with(|| format!("`{name}` has an invalid schema"))?;
+        }
+
         for (name, validator) in &config.args {
             validated.insert(
                 name.to_string(),
@@ -168,6 +177,17 @@ mod test {
     #[test]
     fn rejects_unknown_argument() {
         assert_args_fail!("", "surprise = 1", "Unknown arguments: `surprise`");
+    }
+
+    #[test]
+    fn rejects_invalid_schema_before_input() {
+        // a bad default is the module author's mistake, so it should surface
+        // even when the caller supplies a perfectly valid value for the arg.
+        assert_args_fail!(
+            "args.count.type = \"int\"\nargs.count.default = \"nope\"",
+            "count = 3",
+            "`count` has an invalid schema: default does not match the schema: expected type integer, but got a value of type string"
+        );
     }
 
     #[test]

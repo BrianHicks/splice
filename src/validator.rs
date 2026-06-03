@@ -71,9 +71,35 @@ impl Display for ValueType {
 }
 
 impl Validator {
+    /// Check that the schema is internally consistent, independent of any
+    /// caller input. Right now that means: if a default is present, it must
+    /// match the schema. Recurses so that nested defaults are checked even
+    /// when an outer validator has no default of its own.
+    pub fn check(&self) -> Result<()> {
+        if let Some(default) = &self.default {
+            // checking that the default conforms is exactly validating it as if
+            // it were caller-supplied input, so reuse `validate` rather than
+            // growing a second type-matching codepath.
+            self.validate(Some(default.clone()))
+                .wrap_err("default does not match the schema")?;
+        }
+
+        if let Some(items) = &self.items {
+            items.check()?;
+        }
+        if let Some(values) = &self.values {
+            values.check()?;
+        }
+        for (field, validator) in &self.properties {
+            validator
+                .check()
+                .wrap_err_with(|| format!("at field `{field}`"))?;
+        }
+
+        Ok(())
+    }
+
     pub fn validate(&self, value: Option<Value>) -> Result<Value> {
-        // TODO: self-check that the default matches the schema, if present.
-        // (Maybe in a self-check method?)
         match value {
             None => match &self.default {
                 Some(default) => Ok(default.clone()),
@@ -473,6 +499,49 @@ mod test {
             "properties.x.type = \"int\"",
             table,
             "at field `x`: expected type integer, but got a value of type string"
+        )
+    }
+
+    macro_rules! assert_check_fails {
+        ($src:expr, $msg:expr) => {
+            assert_eq!(
+                $msg,
+                parse($src)
+                    .check()
+                    .unwrap_err()
+                    .chain()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<String>>()
+                    .join(": ")
+            )
+        };
+    }
+
+    #[test]
+    fn check_passes_with_no_default() {
+        parse("type = \"int\"").check().unwrap()
+    }
+
+    #[test]
+    fn check_passes_when_default_matches() {
+        parse("type = \"int\"\ndefault = 1").check().unwrap()
+    }
+
+    #[test]
+    fn check_fails_when_default_mismatches() {
+        assert_check_fails!(
+            "type = \"int\"\ndefault = \"nope\"",
+            "default does not match the schema: expected type integer, but got a value of type string"
+        )
+    }
+
+    #[test]
+    fn check_recurses_into_nested_property_defaults() {
+        // the outer struct has no default, so nothing exercises the inner
+        // default on the validation path. `check` must recurse to catch it.
+        assert_check_fails!(
+            "properties.retries.type = \"int\"\nproperties.retries.default = \"nope\"",
+            "at field `retries`: default does not match the schema: expected type integer, but got a value of type string"
         )
     }
 }
