@@ -1,16 +1,17 @@
 mod config;
 mod module;
+mod sync;
 
 use clap::Parser;
 use eyre::Context;
-use std::{fs::read_to_string, path::PathBuf, process::exit};
+use std::{path::PathBuf, process::exit};
 
 use crate::config::Config;
 
 #[derive(Debug, Parser)]
 #[command(version, about)]
 struct App {
-    #[clap(default_value = "splice.toml")]
+    #[clap(default_value = config::FILE_NAME)]
     config_path: PathBuf,
 
     #[command(subcommand)]
@@ -18,19 +19,8 @@ struct App {
 }
 
 impl App {
-    fn config(&self) -> eyre::Result<Config> {
-        let contents = read_to_string(&self.config_path).wrap_err_with(|| {
-            format!(
-                "could not read config file at `{}`",
-                self.config_path.display()
-            )
-        })?;
-
-        toml::from_str(&contents).wrap_err("could not parse config file as TOML")
-    }
-
     fn run(self) -> eyre::Result<()> {
-        let config = self.config()?;
+        let config = config::read(&self.config_path)?;
         self.command.unwrap_or(Command::Sync).run(config)
     }
 }
@@ -50,10 +40,7 @@ enum Command {
 impl Command {
     fn run(&self, config: Config) -> eyre::Result<()> {
         match self {
-            Self::Sync => {
-                println!("TODO: sync!");
-                Ok(())
-            }
+            Self::Sync => sync::sync(config.try_app()?),
             Self::Config { subcommand } => subcommand.run(config),
         }
     }
