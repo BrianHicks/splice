@@ -11,6 +11,7 @@ use crate::config;
 #[derive(Debug)]
 pub struct Module {
     pub config: config::ModuleConfig,
+    #[expect(dead_code)]
     args: Table,
     prefix: Option<PathBuf>,
 
