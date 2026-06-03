@@ -12,4 +12,5 @@ depends = ["TRYCMD=overwrite test"]
 
 [tasks.clippy]
 sources = ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
+# TODO: make this disallow warnings in CI (and maybe locally too?)
 run = "cargo clippy"
