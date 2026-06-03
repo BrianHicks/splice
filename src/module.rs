@@ -11,7 +11,6 @@ use crate::config;
 #[derive(Debug)]
 pub struct Module {
     pub config: config::ModuleConfig,
-    #[expect(dead_code)]
     args: Table,
     prefix: Option<PathBuf>,
 
@@ -39,8 +38,9 @@ impl Module {
     pub fn files(&self) -> Result<BTreeMap<PathBuf, String>> {
         let mut out = BTreeMap::new();
 
-        // TODO: put args etc in here
-        let context = tera::Context::new();
+        let mut context = tera::Context::new();
+        context.try_insert("args", &self.args).wrap_err("could not serialize args to template")?;
+
         let prefix = self
             .prefix
             .as_deref()
