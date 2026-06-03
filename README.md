@@ -15,6 +15,7 @@ Commands:
 
 Options:
   -c, --config-path <CONFIG_PATH>  [default: splice.toml]
+      --no-colors                  [env: NO_COLORS=true]
   -h, --help                       Print help
   -V, --version                    Print version
 

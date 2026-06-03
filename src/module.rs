@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -39,11 +40,16 @@ impl Module {
 
         // TODO: put args etc in here
         let context = tera::Context::new();
+        let prefix = self
+            .prefix
+            .as_deref()
+            .map(Cow::Borrowed)
+            .unwrap_or_else(|| Cow::Owned(PathBuf::from(".")));
 
         for template in self.templates.get_template_names() {
             // TODO: render templates in names as well
             out.insert(
-                PathBuf::from(template),
+                prefix.join(template),
                 self.templates.render(template, &context)?,
             );
         }

@@ -15,6 +15,9 @@ struct App {
     #[clap(long, short, default_value = config::FILE_NAME)]
     config_path: PathBuf,
 
+    #[clap(long, env)]
+    no_colors: bool,
+
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -23,6 +26,7 @@ impl App {
     fn run(self) -> eyre::Result<()> {
         tracing_subscriber::fmt::fmt()
             .with_target(false)
+            .with_ansi(!self.no_colors)
             .without_time()
             .init();
 
