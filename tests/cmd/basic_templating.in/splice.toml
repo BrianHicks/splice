@@ -1,2 +1,4 @@
 [[module]]
 path = "./module"
+
+args = { greeting = "Hey" }

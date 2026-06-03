@@ -1,8 +1,8 @@
 [tools]
-rust = { version = "1.96.0", components = "clippy" }
+rust = { version = "1.96.0", components = "clippy,rustfmt" }
 
 [tasks.ci]
-depends = ["test", "clippy"]
+depends = ["test", "clippy", "format-check"]
 
 [tasks.test]
 run = "cargo test"
@@ -13,3 +13,10 @@ depends = ["TRYCMD=overwrite test"]
 [tasks.clippy]
 sources = ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
 run = "cargo clippy -- -D warnings"
+
+[tasks.format]
+run = "cargo fmt"
+
+[tasks.format-check]
+sources = ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
+run = "cargo fmt --check"
