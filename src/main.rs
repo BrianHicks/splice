@@ -11,7 +11,8 @@ use crate::config::Config;
 #[derive(Debug, Parser)]
 #[command(version, about)]
 struct App {
-    #[clap(default_value = config::FILE_NAME)]
+    // Path to the TOML config file
+    #[clap(long, short, default_value = config::FILE_NAME)]
     config_path: PathBuf,
 
     #[command(subcommand)]
@@ -20,6 +21,11 @@ struct App {
 
 impl App {
     fn run(self) -> eyre::Result<()> {
+        tracing_subscriber::fmt::fmt()
+            .with_target(false)
+            .without_time()
+            .init();
+
         let config = config::read(&self.config_path)?;
         self.command.unwrap_or(Command::Sync).run(config)
     }

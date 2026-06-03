@@ -1,6 +1,8 @@
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use eyre::{Result, bail};
+use eyre::{Context, Result};
+use tera::Tera;
 use toml::Table;
 
 use crate::config;
@@ -10,16 +12,42 @@ pub struct Module {
     pub config: config::ModuleConfig,
     args: Table,
     prefix: Option<PathBuf>,
+
+    templates: Tera,
 }
 
 impl Module {
+    #[tracing::instrument]
     pub fn from_dir(dir: &Path, args: Table, prefix: Option<PathBuf>) -> Result<Self> {
         let config = config::read(&dir.join(config::FILE_NAME))?;
+
+        // TODO: validate args
 
         Ok(Module {
             config: config.try_module()?,
             args,
             prefix,
+
+            templates: Tera::new(&dir.join("templates").join("**").join("*").to_string_lossy())
+                .wrap_err_with(|| format!("could not load templates in `{}`", dir.display()))?,
         })
+    }
+
+    #[tracing::instrument]
+    pub fn files(&self) -> Result<BTreeMap<PathBuf, String>> {
+        let mut out = BTreeMap::new();
+
+        // TODO: put args etc in here
+        let context = tera::Context::new();
+
+        for template in self.templates.get_template_names() {
+            // TODO: render templates in names as well
+            out.insert(
+                PathBuf::from(template),
+                self.templates.render(template, &context)?,
+            );
+        }
+
+        Ok(out)
     }
 }
