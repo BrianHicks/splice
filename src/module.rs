@@ -18,10 +18,10 @@ pub struct Module {
 }
 
 impl Module {
-    #[tracing::instrument]
+    #[tracing::instrument(skip(raw_args))]
     pub fn from_dir(dir: &Path, raw_args: Table, prefix: Option<PathBuf>) -> Result<Self> {
         let config = config::read(&dir.join(config::FILE_NAME))?.try_module()?;
-        let args = Self::validate_args(&config, raw_args)?;
+        let args = Self::validate_args(&config, raw_args).wrap_err("while validating args")?;
 
         Ok(Module {
             config,
