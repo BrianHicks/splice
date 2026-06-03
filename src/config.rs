@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     fs::read_to_string,
     path::{Path, PathBuf},
 };
@@ -6,6 +7,8 @@ use std::{
 use eyre::{Context, Result, bail};
 use serde::{Deserialize, Deserializer, Serialize};
 use toml::Table;
+
+use crate::validator::Validator;
 
 pub const FILE_NAME: &str = "splice.toml";
 
@@ -75,6 +78,8 @@ impl<'de> Deserialize<'de> for Config {
 pub struct ModuleConfig {
     #[serde(default, rename = "module")]
     pub modules: Vec<ModuleInvocation>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub args: BTreeMap<String, Validator>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -158,6 +163,7 @@ mod test {
     fn roundtrip_module() {
         // Needed since Deserialize is implemented and Serialize is derived.
         let config = Config::Module(ModuleConfig {
+            args: BTreeMap::new(),
             modules: vec![ModuleInvocation {
                 args: Table::new(),
                 prefix: Some(PathBuf::from("/foo")),

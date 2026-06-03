@@ -1,6 +1,7 @@
 mod config;
 mod module;
 mod sync;
+mod validator;
 
 use clap::Parser;
 use eyre::Context;
