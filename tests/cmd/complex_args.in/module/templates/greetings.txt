@@ -1,0 +1,3 @@
+{%- for greeting in args.greetings -%}
+{{ greeting }}, World!
+{% endfor %}

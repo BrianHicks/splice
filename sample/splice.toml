@@ -1,3 +1,0 @@
-[[module]]
-path = "./tasks"
-arguments = { foo = "bar", baz = "quux" }

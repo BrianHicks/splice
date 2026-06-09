@@ -1,0 +1,15 @@
+type = "module"
+
+[args.greetings]
+items.type = "string"
+
+[args.tools]
+values.type = "string"
+
+[args.users.values.properties]
+name.type = "string"
+home.type = "string"
+groups = {
+    default = [],
+    items.type = "string",
+}

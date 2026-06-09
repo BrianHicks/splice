@@ -1,0 +1,18 @@
+[[module]]
+path = "./module"
+
+[module.args]
+greetings = ["Hello", "Hi", "How's it going"]
+tools = {
+    python = "3.14",
+    jq = "1.8.1",
+}
+
+[module.args.users.jniceperson]
+name = "Jim Niceperson"
+home = "/home/jniceperson"
+
+[module.args.users.root]
+name = "Root"
+home = "/root"
+groups = ["wheel"]
