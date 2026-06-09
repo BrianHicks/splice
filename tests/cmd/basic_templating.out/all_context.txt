@@ -1,5 +1,3 @@
-{
-  "args": {
-    "greeting": "Hey"
-  }
-}
+args = {"greeting": "Hey"}
+filename = ./all_context.txt
+splices = {}

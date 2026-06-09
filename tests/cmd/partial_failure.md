@@ -4,11 +4,15 @@ If you have some templated files, but there is a partial failure (we're trying t
 $ splice sync
 ? 1
 
-   0: [91mFailed to render 'failure.txt'[0m
-   1: [91mVariable `args.foo` not found in context while rendering 'failure.txt'[0m
+   0: [91mfailed to render `failure.txt` to `./failure.txt`[0m
+   1: [91merror: Field `foo` is not defined.
+       --> failure.txt:1:8
+        |
+      1 | {{ args.foo }}
+        |         ^^^[0m
 
 Location:
-   [35msrc/module.rs[0m:[35m90[0m
+   [35msrc/module.rs[0m:[35m208[0m
 
 Backtrace omitted. Run with RUST_BACKTRACE=1 environment variable to display it.
 Run with RUST_BACKTRACE=full to include source snippets.

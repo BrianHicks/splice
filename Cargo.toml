@@ -10,9 +10,10 @@ eyre = "0.6.12"
 rhai = "1.25.1"
 serde = { version = "1.0.228", features = ["derive"] }
 toml = "1.1.2"
-tera = "1.20.1"
+tera = { version = "2.0.0-alpha.7", features = ["fast", "glob_fs", "preserve_order", "unicode"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
+regex = "1.12.4"
 
 [dev-dependencies]
 trycmd = "1.2.0"

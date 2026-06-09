@@ -3,5 +3,4 @@
 {{ tool }} = "{{ version }}"
 {%- endfor %}
 
-# SPLICE: extra tasks
-# SPLICE END
+{{ splice(name="extra tasks", comment="#") }}

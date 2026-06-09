@@ -36,8 +36,11 @@ pub fn sync(config: AppConfig) -> Result<()> {
         modules.push(module)
     }
 
-    // TODO: validate args
-    // TODO: read existing files
+    // read existing files
+    for module in &mut modules {
+        module.collect_splices()?; // TODO: contextualize with name as below
+    }
+
     // generate new files, syncing in splice blocks
     let mut out = BTreeMap::new();
     for module in modules {
