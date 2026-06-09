@@ -1,0 +1,8 @@
+[tools]
+python = "3.13" # Old version
+# missing tool here
+
+# SPLICE: extra tasks
+[tasks.something]
+run = "echo something"
+# SPLICE END

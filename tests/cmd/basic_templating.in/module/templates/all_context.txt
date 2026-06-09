@@ -1,1 +1,3 @@
-{{ __tera_context }}
+{% for kv in __tera_context | pairs | sort -%}
+{{ kv[0] }} = {{ kv[1] }}
+{% endfor -%}

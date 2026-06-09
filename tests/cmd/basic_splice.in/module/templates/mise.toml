@@ -1,0 +1,6 @@
+[tools]
+{%- for tool, version in args.tools %}
+{{ tool }} = "{{ version }}"
+{%- endfor %}
+
+{{ splice(name="extra tasks", comment="#") }}

@@ -1,35 +1,73 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
-use eyre::{Context, Result, bail};
-use tera::Tera;
+use eyre::{Context, Result, bail, eyre};
+use tera::{Tera, TeraResult};
 use toml::{Table, Value};
 
 use crate::config::{self, ModuleConfig};
 
+// Comment markers are short (e.g. `#`, `//`, `<!--`), so we allow one to four
+// non-whitespace characters followed by a single space before the directive.
+static SPLICE_START: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^\S{1,4}\sSPLICE: (?<name>.+)$").unwrap());
+static SPLICE_END: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^\S{1,4}\sSPLICE END").unwrap());
+
+fn splice(kwargs: tera::Kwargs, state: &tera::State) -> TeraResult<String> {
+    let comment = kwargs.must_get::<&str>("comment")?;
+    let name = kwargs.must_get::<&str>("name")?;
+
+    // Look up any preserved content for this splice by its exact name. We avoid
+    // `get_from_path` here because splice names may contain `.`, which it would
+    // interpret as nested-map traversal and fail to match.
+    let splices = state.get::<tera::Map>("splices")?;
+    let content = splices
+        .as_ref()
+        .and_then(|map| map.get(&tera::value::Key::Str(name)))
+        .and_then(tera::Value::as_str)
+        .unwrap_or_default();
+
+    Ok(format!(
+        "{comment} SPLICE: {name}\n{content}{comment} SPLICE END"
+    ))
+}
+
 #[derive(Debug)]
 pub struct Module {
     pub config: config::ModuleConfig,
-    args: BTreeMap<String, Value>,
     prefix: Option<PathBuf>,
 
     templates: Tera,
+    splices: BTreeMap<PathBuf, BTreeMap<String, String>>,
 }
 
 impl Module {
     #[tracing::instrument(skip(raw_args))]
     pub fn from_dir(dir: &Path, raw_args: Table, prefix: Option<PathBuf>) -> Result<Self> {
         let config = config::read(&dir.join(config::FILE_NAME))?.try_module()?;
-        let args = Self::validate_args(&config, raw_args).wrap_err("while validating args")?;
+
+        let mut templates = Tera::new();
+        templates.register_function("splice", splice);
+
+        templates.global_context().insert(
+            "args",
+            &Self::validate_args(&config, raw_args).wrap_err("while validating args")?,
+        );
+
+        templates
+            .load_from_glob(&dir.join("templates").join("**").join("*").to_string_lossy())
+            .wrap_err_with(|| format!("could not load templates in `{}`", dir.display()))?;
 
         Ok(Module {
             config,
-            args,
             prefix,
-
-            templates: Tera::new(&dir.join("templates").join("**").join("*").to_string_lossy())
-                .wrap_err_with(|| format!("could not load templates in `{}`", dir.display()))?,
+            templates,
+            splices: BTreeMap::new(),
         })
     }
 
@@ -68,27 +106,114 @@ impl Module {
         Ok(validated)
     }
 
-    #[tracing::instrument]
-    pub fn files(&self) -> Result<BTreeMap<PathBuf, String>> {
-        let mut out = BTreeMap::new();
-
-        let mut context = tera::Context::new();
-        context
-            .try_insert("args", &self.args)
-            .wrap_err("could not serialize args to template")?;
-
+    fn files_of_interest(&self) -> Result<impl Iterator<Item = (PathBuf, &str)>> {
         let prefix = self
             .prefix
             .as_deref()
             .map(Cow::Borrowed)
-            .unwrap_or_else(|| Cow::Owned(PathBuf::from(".")));
+            .unwrap_or_else(|| Cow::Owned(PathBuf::from(".")))
+            .to_path_buf();
 
-        for template in self.templates.get_template_names() {
-            // TODO: render templates in names as well
-            out.insert(
-                prefix.join(template),
-                self.templates.render(template, &context)?,
-            );
+        // TODO: render templates in names as well
+        Ok(self
+            .templates
+            .get_template_names()
+            .map(move |template| (prefix.join(template), template)))
+    }
+
+    pub fn collect_splices(&mut self) -> Result<()> {
+        let mut out = BTreeMap::new();
+
+        for (filename, _) in self.files_of_interest()? {
+            let mut splices = BTreeMap::new();
+
+            let exists = filename.try_exists().wrap_err_with(|| {
+                format!("could not check the existence of {}", filename.display())
+            })?;
+            if !exists {
+                out.insert(filename, splices);
+                continue;
+            }
+
+            let file = File::open(&filename)
+                .wrap_err_with(|| format!("could not open `{}` for reading", filename.display()))?;
+            let reader = BufReader::new(file);
+
+            let mut state: Option<(String, String)> = None;
+
+            for (i, line_res) in reader.lines().enumerate() {
+                let line = line_res?;
+
+                match state {
+                    None => {
+                        if let Some(c) = SPLICE_START.captures(&line) {
+                            let name = c
+                                .name("name")
+                                .expect("missing name means the regex is misconfigured!")
+                                .as_str()
+                                .to_owned();
+
+                            state = Some((name, String::new()))
+                        } else if SPLICE_END.is_match(&line) {
+                            return Err(eyre!("Found a SPLICE END on line {}", i + 1,))
+                                .wrap_err(format!("in `{}`", filename.display()));
+                        }
+                    }
+                    Some((name, mut splice)) => {
+                        if SPLICE_START.is_match(&line) {
+                            return Err(eyre!(
+                                "Found a SPLICE on line {} before the end of the `{name}` splice.",
+                                i + 1,
+                            ))
+                            .wrap_err(format!("in `{}`", filename.display()));
+                        } else if SPLICE_END.is_match(&line) {
+                            splices.insert(name, splice);
+                            state = None;
+                        } else {
+                            splice.push_str(&line);
+                            splice.push('\n'); // TODO: need to do \r\n for Windows?
+
+                            state = Some((name, splice)) // TODO: does this allocate on every line?
+                        }
+                    }
+                }
+            }
+
+            // A splice that opens but never closes would otherwise be silently
+            // dropped on the next render, throwing away the user's content. Treat
+            // it as an error so the unterminated block is fixed before we write.
+            if let Some((name, _)) = state {
+                return Err(eyre!(
+                    "Reached the end of the file while still inside the `{name}` splice (missing SPLICE END)."
+                ))
+                .wrap_err(format!("in `{}`", filename.display()));
+            }
+
+            // TODO: migrations between files over time
+            out.insert(filename, splices);
+        }
+
+        self.splices = out;
+
+        Ok(())
+    }
+
+    fn render(&self, filename: &Path, template: &str) -> Result<String> {
+        let mut context = tera::Context::new();
+        context.insert("filename", &filename);
+        context.insert("splices", &self.splices.get(filename));
+
+        self.templates
+            .render(template, &context)
+            .wrap_err_with(|| format!("failed to render `{template}` to `{}`", filename.display()))
+    }
+
+    #[tracing::instrument]
+    pub fn files(&self) -> Result<BTreeMap<PathBuf, String>> {
+        let mut out = BTreeMap::new();
+
+        for (filename, template) in self.files_of_interest()? {
+            out.insert(filename.clone(), self.render(&filename, template)?);
         }
 
         Ok(out)
