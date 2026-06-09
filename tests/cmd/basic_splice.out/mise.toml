@@ -1,0 +1,8 @@
+[tools]
+jq = "1.8.1"
+python = "3.14"
+
+# SPLICE: extra tasks
+[tasks.something]
+run = "echo something"
+# SPLICE END

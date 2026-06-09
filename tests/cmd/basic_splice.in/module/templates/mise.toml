@@ -1,0 +1,7 @@
+[tools]
+{%- for tool, version in args.tools %}
+{{ tool }} = "{{ version }}"
+{%- endfor %}
+
+# SPLICE: extra tasks
+# SPLICE END

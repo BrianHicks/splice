@@ -1,0 +1,6 @@
+[[module]]
+path = "./module"
+
+[module.args.tools]
+python = "3.14"
+jq = "1.8.1"
