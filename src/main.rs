@@ -6,6 +6,11 @@ mod validator;
 use clap::Parser;
 use eyre::Context;
 use std::{path::PathBuf, process::exit};
+use tracing::Level;
+use tracing_error::ErrorLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{Layer, filter::LevelFilter, fmt};
 
 use crate::config::Config;
 
@@ -17,7 +22,11 @@ struct App {
     config_path: PathBuf,
 
     #[clap(long, env)]
-    no_colors: bool,
+    no_color: bool,
+
+    /// The lowest severity of log to print
+    #[clap(long, env, default_value_t = Level::INFO)]
+    log_level: Level,
 
     #[command(subcommand)]
     command: Option<Command>,
@@ -25,10 +34,15 @@ struct App {
 
 impl App {
     fn run(self) -> eyre::Result<()> {
-        tracing_subscriber::fmt::fmt()
-            .with_target(false)
-            .with_ansi(!self.no_colors)
-            .without_time()
+        tracing_subscriber::registry()
+            .with(
+                fmt::layer()
+                    .with_target(false)
+                    .with_ansi(!self.no_color)
+                    .without_time()
+                    .with_filter(LevelFilter::from_level(self.log_level)),
+            )
+            .with(ErrorLayer::default())
             .init();
 
         let config = config::read(&self.config_path)?;
@@ -81,8 +95,19 @@ impl ConfigCommand {
 }
 
 fn main() {
-    color_eyre::install().unwrap();
     let app = App::parse();
+
+    let mut hooks = color_eyre::config::HookBuilder::default()
+        .display_location_section(false)
+        .display_env_section(false);
+    if app.no_color {
+        // A blank theme strips the ANSI styling from the error report, keeping
+        // it consistent with the logger's `--no-color` behavior.
+        hooks = hooks.theme(color_eyre::config::Theme::new());
+    }
+    hooks
+        .install()
+        .expect("failed to install the color_eyre error handler");
 
     if let Err(err) = app.run() {
         eprintln!("{err:?}");

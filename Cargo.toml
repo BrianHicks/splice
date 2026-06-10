@@ -13,6 +13,7 @@ toml = "1.1.2"
 tera = { version = "2.0.0-alpha.7", features = ["fast", "glob_fs", "preserve_order", "unicode"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
+tracing-error = "0.2.1"
 regex = "1.12.4"
 
 [dev-dependencies]

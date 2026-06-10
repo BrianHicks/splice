@@ -215,7 +215,7 @@ impl Module {
             .wrap_err_with(|| format!("failed to render `{template}` to `{}`", filename.display()))
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(self))]
     pub fn files(&self) -> Result<BTreeMap<PathBuf, String>> {
         let mut out = BTreeMap::new();
 

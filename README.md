@@ -15,7 +15,8 @@ Commands:
 
 Options:
   -c, --config-path <CONFIG_PATH>  [default: splice.toml]
-      --no-colors                  [env: NO_COLORS=true]
+      --no-color                   [env: NO_COLOR=true]
+      --log-level <LOG_LEVEL>      The lowest severity of log to print [env: LOG_LEVEL=info] [default: INFO]
   -h, --help                       Print help
   -V, --version                    Print version
 
