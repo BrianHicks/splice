@@ -1,13 +1,30 @@
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, write};
+use std::path::PathBuf;
 
 use eyre::{Context, Result};
 
 use crate::config::{AppConfig, ModuleLocation};
 use crate::module::Module;
 
+#[tracing::instrument(skip_all)]
 pub fn sync(config: AppConfig) -> Result<()> {
-    // collect modules
+    // collect
+    let mut modules = collect_modules(config).wrap_err("failed to collect modules")?;
+    collect_splices(&mut modules).wrap_err("failed to collect splices")?;
+
+    // render
+    let rendered = render_templates(&modules).wrap_err("failed to render files")?;
+    // TODO: calculate diff
+    // TODO: present a diff to the user (?)
+    write_files(&rendered).wrap_err("failed to write files")?;
+
+    Ok(())
+}
+
+#[tracing::instrument(skip_all)]
+fn collect_modules(config: AppConfig) -> Result<Vec<Module>> {
+    tracing::debug!(count = config.modules.len(), "loading modules");
     let mut module_invocations = config.modules.clone();
     let mut modules = Vec::with_capacity(module_invocations.len());
 
@@ -26,6 +43,10 @@ pub fn sync(config: AppConfig) -> Result<()> {
             }
         };
 
+        tracing::debug!(
+            count = module.config.modules.len(),
+            "extending modules from loaded"
+        );
         module_invocations.extend(module.config.modules.iter().map(|sub_invocation| {
             match &invocation.prefix {
                 Some(prefix) => sub_invocation.inherit_prefix(prefix),
@@ -36,11 +57,20 @@ pub fn sync(config: AppConfig) -> Result<()> {
         modules.push(module)
     }
 
-    // read existing files
-    for module in &mut modules {
-        module.collect_splices()?; // TODO: contextualize with name as below
+    Ok(modules)
+}
+
+#[tracing::instrument(skip_all)]
+fn collect_splices(modules: &mut Vec<Module>) -> Result<()> {
+    for module in modules {
+        module.collect_splices()?; // TODO: contextualize with module name on failure
     }
 
+    Ok(())
+}
+
+#[tracing::instrument(skip_all)]
+fn render_templates(modules: &Vec<Module>) -> Result<BTreeMap<PathBuf, String>> {
     // generate new files, syncing in splice blocks
     let mut out = BTreeMap::new();
     for module in modules {
@@ -50,14 +80,15 @@ pub fn sync(config: AppConfig) -> Result<()> {
         //
         // TODO: add context about which module failed. Needs to have path/name
         // added to each module before that can happen.
-        out.append(&mut module.files()?);
+        out.append(&mut module.render_all()?);
     }
 
-    // TODO: calculate diff
-    // TODO: present a diff to the user (?)
+    Ok(out)
+}
 
-    // write files
-    for (path, contents) in out.iter() {
+#[tracing::instrument(skip_all)]
+fn write_files(contents: &BTreeMap<PathBuf, String>) -> Result<()> {
+    for (path, contents) in contents.iter() {
         // TODO: only write changed files. Print a log with unchanged ones.
         tracing::info!(file = ?path, "writing");
         if let Some(dir) = path.parent() {

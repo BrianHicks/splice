@@ -3,6 +3,6 @@ args.whatever }}`, the path will be templated
 
 ```console
 $ splice sync
- INFO writing file="./HELLO.txt"
+ INFO sync:write_files: writing file="./HELLO.txt"
 
 ```

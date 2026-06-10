@@ -2,6 +2,6 @@ If you use the `SPLICE` directives in a file, it will preserve the contents (see
 
 ```console
 $ splice sync
- INFO writing file="./mise.toml"
+ INFO sync:write_files: writing file="./mise.toml"
 
 ```

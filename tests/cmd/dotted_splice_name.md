@@ -3,6 +3,6 @@ be preserved across a sync, not silently dropped (see `dotted_splice_name.out/co
 
 ```console
 $ splice sync
- INFO writing file="./config.txt"
+ INFO sync:write_files: writing file="./config.txt"
 
 ```
