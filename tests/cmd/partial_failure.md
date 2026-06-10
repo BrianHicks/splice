@@ -12,7 +12,7 @@ $ splice sync
         |         ^^^[0m
 
 Location:
-   [35msrc/module.rs[0m:[35m208[0m
+   [35msrc/module.rs[0m:[35m215[0m
 
 Backtrace omitted. Run with RUST_BACKTRACE=1 environment variable to display it.
 Run with RUST_BACKTRACE=full to include source snippets.

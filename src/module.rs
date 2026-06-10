@@ -106,7 +106,7 @@ impl Module {
         Ok(validated)
     }
 
-    fn files_of_interest(&self) -> Result<impl Iterator<Item = (PathBuf, &str)>> {
+    fn files_of_interest(&self) -> Result<Vec<(PathBuf, &str)>> {
         let prefix = self
             .prefix
             .as_deref()
@@ -114,11 +114,18 @@ impl Module {
             .unwrap_or_else(|| Cow::Owned(PathBuf::from(".")))
             .to_path_buf();
 
-        // TODO: render templates in names as well
-        Ok(self
-            .templates
-            .get_template_names()
-            .map(move |template| (prefix.join(template), template)))
+        let mut out = Vec::new();
+
+        for template_name in self.templates.get_template_names() {
+            let rendered = self
+                .templates
+                .render_str(template_name, &tera::Context::new(), false)
+                .wrap_err_with(|| format!("could not render path `{template_name}`"))?;
+
+            out.push((prefix.join(rendered), template_name))
+        }
+
+        Ok(out)
     }
 
     pub fn collect_splices(&mut self) -> Result<()> {
