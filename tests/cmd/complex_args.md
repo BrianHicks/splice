@@ -2,8 +2,8 @@ We can have arbitrarily deep and nested args!
 
 ```console
 $ splice sync
- INFO writing file="./greetings.txt"
- INFO writing file="./tools.toml"
- INFO writing file="./users.md"
+ INFO sync:write_files: writing file="./greetings.txt"
+ INFO sync:write_files: writing file="./tools.toml"
+ INFO sync:write_files: writing file="./users.md"
 
 ```

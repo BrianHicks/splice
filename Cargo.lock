@@ -864,6 +864,7 @@ dependencies = [
  "tera",
  "toml",
  "tracing",
+ "tracing-error",
  "tracing-subscriber",
  "trycmd",
 ]

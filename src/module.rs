@@ -49,7 +49,9 @@ pub struct Module {
 impl Module {
     #[tracing::instrument(skip(raw_args))]
     pub fn from_dir(dir: &Path, raw_args: Table, prefix: Option<PathBuf>) -> Result<Self> {
-        let config = config::read(&dir.join(config::FILE_NAME))?.try_module()?;
+        let config_file = &dir.join(config::FILE_NAME);
+        tracing::debug!(?config_file, "loading config");
+        let config = config::read(config_file)?.try_module()?;
 
         let mut templates = Tera::new();
         templates.register_function("splice", splice);
@@ -59,8 +61,10 @@ impl Module {
             &Self::validate_args(&config, raw_args).wrap_err("while validating args")?,
         );
 
+        let template_src = dir.join("templates").join("**").join("*");
+        tracing::debug!(?template_src, "loading templates");
         templates
-            .load_from_glob(&dir.join("templates").join("**").join("*").to_string_lossy())
+            .load_from_glob(&template_src.to_string_lossy())
             .wrap_err_with(|| format!("could not load templates in `{}`", dir.display()))?;
 
         Ok(Module {
@@ -71,6 +75,7 @@ impl Module {
         })
     }
 
+    #[tracing::instrument(skip_all)]
     fn validate_args(
         config: &ModuleConfig,
         mut raw_args: Table,
@@ -106,6 +111,7 @@ impl Module {
         Ok(validated)
     }
 
+    #[tracing::instrument(skip_all)]
     fn files_of_interest(&self) -> Result<Vec<(PathBuf, &str)>> {
         let prefix = self
             .prefix
@@ -113,6 +119,7 @@ impl Module {
             .map(Cow::Borrowed)
             .unwrap_or_else(|| Cow::Owned(PathBuf::from(".")))
             .to_path_buf();
+        tracing::debug!(?prefix, "using prefix");
 
         let mut out = Vec::new();
 
@@ -122,12 +129,14 @@ impl Module {
                 .render_str(template_name, &tera::Context::new(), false)
                 .wrap_err_with(|| format!("could not render path `{template_name}`"))?;
 
+            tracing::trace!(?template_name, ?prefix, ?rendered, "rendered path");
             out.push((prefix.join(rendered), template_name))
         }
 
         Ok(out)
     }
 
+    #[tracing::instrument(skip_all)]
     pub fn collect_splices(&mut self) -> Result<()> {
         let mut out = BTreeMap::new();
 
@@ -138,6 +147,7 @@ impl Module {
                 format!("could not check the existence of {}", filename.display())
             })?;
             if !exists {
+                tracing::trace!(?filename, "path does not exist to check traces");
                 out.insert(filename, splices);
                 continue;
             }
@@ -196,6 +206,8 @@ impl Module {
                 .wrap_err(format!("in `{}`", filename.display()));
             }
 
+            tracing::debug!(?filename, count = splices.len(), "scanned file for traces");
+
             // TODO: migrations between files over time
             out.insert(filename, splices);
         }
@@ -205,18 +217,20 @@ impl Module {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self))]
     fn render(&self, filename: &Path, template: &str) -> Result<String> {
         let mut context = tera::Context::new();
         context.insert("filename", &filename);
         context.insert("splices", &self.splices.get(filename));
 
+        tracing::trace!("rendering"); // context included with the instrument annotation
         self.templates
             .render(template, &context)
             .wrap_err_with(|| format!("failed to render `{template}` to `{}`", filename.display()))
     }
 
-    #[tracing::instrument]
-    pub fn files(&self) -> Result<BTreeMap<PathBuf, String>> {
+    #[tracing::instrument(level = "trace", skip(self))]
+    pub fn render_all(&self) -> Result<BTreeMap<PathBuf, String>> {
         let mut out = BTreeMap::new();
 
         for (filename, template) in self.files_of_interest()? {

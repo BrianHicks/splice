@@ -7,13 +7,17 @@ left untouched (see `unterminated_splice.out/config.txt`).
 $ splice sync
 ? 1
 
-   0: [91min `./config.txt`[0m
-   1: [91mReached the end of the file while still inside the `section` splice (missing SPLICE END).[0m
+   0: failed to collect splices
+   1: in `./config.txt`
+   2: Reached the end of the file while still inside the `section` splice (missing SPLICE END).
 
-Location:
-   [35msrc/module.rs[0m:[35m193[0m
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ SPANTRACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Backtrace omitted. Run with RUST_BACKTRACE=1 environment variable to display it.
-Run with RUST_BACKTRACE=full to include source snippets.
+   0: splice::module::collect_splices
+      at src/module.rs:[..]
+   1: splice::sync::collect_splices
+      at src/sync.rs:[..]
+   2: splice::sync::sync
+      at src/sync.rs:[..]
 
 ```
