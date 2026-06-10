@@ -1,0 +1,4 @@
+type = "module"
+
+[args]
+greeting.type = "string"

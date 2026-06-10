@@ -11,7 +11,7 @@ $ splice sync
    1: [91mReached the end of the file while still inside the `section` splice (missing SPLICE END).[0m
 
 Location:
-   [35msrc/module.rs[0m:[35m186[0m
+   [35msrc/module.rs[0m:[35m193[0m
 
 Backtrace omitted. Run with RUST_BACKTRACE=1 environment variable to display it.
 Run with RUST_BACKTRACE=full to include source snippets.

@@ -1,0 +1,5 @@
+[[module]]
+path = "./module"
+
+[module.args]
+greeting = "hello"
