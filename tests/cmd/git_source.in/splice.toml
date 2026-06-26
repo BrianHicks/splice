@@ -1,0 +1,12 @@
+[[module]]
+git = "git@github.com:BrianHicks/splice.git"
+path = "tests/cmd/basic_templating.in/module"
+prefix = "output-without-rev"
+
+args = { greeting = "Hey" }
+
+[[module]]
+git = "git@github.com:BrianHicks/splice.git"
+rev = "9b2f7a5066f7da8862bec4b12ecd4fe083b32464"
+path = "tests/cmd/basic_templating.in/module"
+prefix = "output-with-rev"

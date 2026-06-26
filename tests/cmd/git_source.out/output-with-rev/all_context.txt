@@ -1,0 +1,3 @@
+args = {"greeting": "Hello"}
+filename = output-with-rev/all_context.txt
+splices = {}

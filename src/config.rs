@@ -119,10 +119,15 @@ impl ModuleInvocation {
 #[cfg_attr(test, derive(PartialEq))]
 #[serde(untagged)]
 pub enum ModuleLocation {
-    // TODO: "path" is probably overloaded. Goal here is to get a local path, so
-    // "local" or "dir" or something? But it conflicts with adding modules which
-    // output to a specific path.
-    Local { path: PathBuf },
+    Git {
+        #[serde(rename = "git")]
+        repo: String,
+        rev: Option<String>,
+        path: PathBuf,
+    },
+    Local {
+        path: PathBuf,
+    },
 }
 
 #[cfg(test)]

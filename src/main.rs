@@ -1,5 +1,6 @@
 mod config;
 mod module;
+mod remote_cache;
 mod sync;
 mod validator;
 
@@ -13,6 +14,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{Layer, filter::LevelFilter, fmt};
 
 use crate::config::Config;
+use crate::remote_cache::RemoteCache;
 
 #[derive(Debug, Parser)]
 #[command(version, about)]
@@ -27,6 +29,10 @@ struct App {
     /// The lowest severity of log to print
     #[clap(long, env, default_value_t = Level::INFO)]
     log_level: Level,
+
+    /// Where to store the cache
+    #[clap(long, env = "SPLICE_CACHE_ROOT", default_value = "todo-cache")]
+    cache_root: PathBuf,
 
     #[command(subcommand)]
     command: Option<Command>,
@@ -46,7 +52,8 @@ impl App {
             .init();
 
         let config = config::read(&self.config_path)?;
-        self.command.unwrap_or(Command::Sync).run(config)
+        let cache = RemoteCache::new(self.cache_root);
+        self.command.unwrap_or(Command::Sync).run(config, cache)
     }
 }
 
@@ -63,9 +70,9 @@ enum Command {
 }
 
 impl Command {
-    fn run(&self, config: Config) -> eyre::Result<()> {
+    fn run(&self, config: Config, cache: RemoteCache) -> eyre::Result<()> {
         match self {
-            Self::Sync => sync::sync(config.try_app()?),
+            Self::Sync => sync::sync(config.try_app()?, cache),
             Self::Config { subcommand } => subcommand.run(config),
         }
     }

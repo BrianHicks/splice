@@ -6,11 +6,12 @@ use eyre::{Context, Result, bail};
 
 use crate::config::{AppConfig, ModuleLocation};
 use crate::module::Module;
+use crate::remote_cache::RemoteCache;
 
 #[tracing::instrument(skip_all)]
-pub fn sync(config: AppConfig) -> Result<()> {
+pub fn sync(config: AppConfig, cache: RemoteCache) -> Result<()> {
     // collect
-    let mut modules = collect_modules(config).wrap_err("failed to collect modules")?;
+    let mut modules = collect_modules(config, cache).wrap_err("failed to collect modules")?;
     collect_splices(&mut modules).wrap_err("failed to collect splices")?;
 
     // render
@@ -23,7 +24,7 @@ pub fn sync(config: AppConfig) -> Result<()> {
 }
 
 #[tracing::instrument(skip_all)]
-fn collect_modules(config: AppConfig) -> Result<Vec<Module>> {
+fn collect_modules(config: AppConfig, cache: RemoteCache) -> Result<Vec<Module>> {
     tracing::debug!(count = config.modules.len(), "loading modules");
     let mut module_invocations = config.modules.clone();
     let mut modules = Vec::with_capacity(module_invocations.len());
@@ -38,6 +39,20 @@ fn collect_modules(config: AppConfig) -> Result<Vec<Module>> {
         // or Git and cache by etag etc. (Maybe need to take care of these in
         // parallel then?)
         let module = match invocation.location {
+            ModuleLocation::Git { repo, rev, path } => {
+                let base = cache.fetch_git(&repo, &rev).wrap_err_with(|| {
+                    format!(
+                        "could not get {repo} at {}",
+                        rev.unwrap_or_else(|| "default branch".into())
+                    )
+                })?;
+
+                Module::from_dir(
+                    &base.join(&path),
+                    invocation.args,
+                    invocation.prefix.clone(),
+                )?
+            }
             ModuleLocation::Local { path } => {
                 Module::from_dir(&path, invocation.args, invocation.prefix.clone())?
             }

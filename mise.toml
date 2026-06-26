@@ -7,6 +7,12 @@ depends = ["test", "clippy", "format-check"]
 [tasks.test]
 run = "cargo test"
 
+[tasks.release]
+run = "cargo build --release"
+
+[tasks.doc]
+run = "cargo doc"
+
 [tasks."test:update"]
 depends = ["TRYCMD=overwrite test"]
 

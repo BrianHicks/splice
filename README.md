@@ -17,6 +17,7 @@ Options:
   -c, --config-path <CONFIG_PATH>  [default: splice.toml]
       --no-color                   [env: NO_COLOR=true]
       --log-level <LOG_LEVEL>      The lowest severity of log to print [env: LOG_LEVEL=info] [default: INFO]
+      --cache-root <CACHE_ROOT>    Where to store the cache [env: SPLICE_CACHE_ROOT=[CWD]/tests/cache] [default: todo-cache]
   -h, --help                       Print help
   -V, --version                    Print version
 
