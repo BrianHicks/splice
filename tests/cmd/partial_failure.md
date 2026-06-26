@@ -7,7 +7,7 @@ $ splice sync
    0: failed to render files
    1: failed to render `failure.txt` to `./failure.txt`
    2: error: Field `foo` is not defined.
-       --> failure.txt:1:8
+       --> failure.txt:1:9
         |
       1 | {{ args.foo }}
         |         ^^^
