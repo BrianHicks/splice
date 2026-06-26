@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fs::{create_dir_all, write};
 use std::path::PathBuf;
 
-use eyre::{Context, Result};
+use eyre::{Context, Result, bail};
 
 use crate::config::{AppConfig, ModuleLocation};
 use crate::module::Module;
@@ -74,13 +74,14 @@ fn render_templates(modules: &Vec<Module>) -> Result<BTreeMap<PathBuf, String>> 
     // generate new files, syncing in splice blocks
     let mut out = BTreeMap::new();
     for module in modules {
-        // Note that overlapping paths will be overwritten by later modules.
-        // This is by design. This program will grow a masking functionality
-        // sometime later to deal with exceptions here.
-        //
         // TODO: add context about which module failed. Needs to have path/name
         // added to each module before that can happen.
-        out.append(&mut module.render_all()?);
+        for (path, contents) in module.render_all()? {
+            if out.contains_key(&path) {
+                bail!("Output already contains `{}`.", path.display())
+            }
+            out.insert(path, contents);
+        }
     }
 
     Ok(out)
